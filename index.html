@@ -145,6 +145,9 @@
                         <button onclick="saveBook()" class="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
                             <span id="saveButtonText">Save Book</span>
                         </button>
+                        <button onclick="resetForm()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
+                            Clear
+                        </button>
                         <button id="cancelButton" onclick="resetForm()" class="hidden px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
                             Cancel
                         </button>
@@ -196,8 +199,10 @@
         });
 
         function setupEventListeners() {
-            // Title input for filename preview
-            document.getElementById('title').addEventListener('input', updateFilenamePreview);
+            // All input fields for filename preview
+            ['title', 'issue', 'condition', 'note'].forEach(fieldId => {
+                document.getElementById(fieldId).addEventListener('input', updateFilenamePreview);
+            });
 
             // Image upload handlers
             document.getElementById('frontInput').addEventListener('change', function(e) {
@@ -209,24 +214,35 @@
             });
         }
 
-        function generateFileName(title, side) {
-            const sanitizedTitle = title
-                .toLowerCase()
+        function generateFileName(book, side) {
+            const fields = [];
+            
+            if (book.title && book.title.trim()) fields.push(book.title.trim());
+            if (book.issue && book.issue.trim()) fields.push(book.issue.trim());
+            if (book.condition && book.condition.trim()) fields.push(book.condition.trim());
+            if (book.note && book.note.trim()) fields.push(book.note.trim());
+            
+            const combinedFields = fields.join(' ').toLowerCase()
                 .replace(/[^a-z0-9\s]/g, '')
                 .replace(/\s+/g, '_')
-                .substring(0, 50);
-
-            const timestamp = new Date().toISOString().split('T')[0];
-            return `${sanitizedTitle}_${side}_${timestamp}`;
+                .substring(0, 80);
+            
+            return `${combinedFields}_{${side.toUpperCase()}}`;
         }
 
         function updateFilenamePreview() {
-            const title = document.getElementById('title').value;
+            const currentBook = {
+                title: document.getElementById('title').value,
+                issue: document.getElementById('issue').value,
+                condition: document.getElementById('condition').value,
+                note: document.getElementById('note').value
+            };
+            
             const preview = document.getElementById('filenamePreview');
             
-            if (title.trim()) {
-                document.getElementById('frontFilename').textContent = `Front: ${generateFileName(title, 'front')}.jpg`;
-                document.getElementById('backFilename').textContent = `Back: ${generateFileName(title, 'back')}.jpg`;
+            if (currentBook.title.trim()) {
+                document.getElementById('frontFilename').textContent = `Front: ${generateFileName(currentBook, 'front')}.jpg`;
+                document.getElementById('backFilename').textContent = `Back: ${generateFileName(currentBook, 'back')}.jpg`;
                 preview.classList.remove('hidden');
             } else {
                 preview.classList.add('hidden');
@@ -288,7 +304,7 @@
             localStorage.setItem('scannedBooks', JSON.stringify(books));
             renderBookList();
             updateBookCount();
-            resetForm();
+            // Removed resetForm() call - fields stay populated
         }
 
         function resetForm() {
@@ -361,12 +377,12 @@
             };
 
             if (book.frontImage) {
-                const frontFilename = `${generateFileName(book.title, 'front')}.jpg`;
+                const frontFilename = `${generateFileName(book, 'front')}.jpg`;
                 downloadFile(book.frontImage, frontFilename);
             }
 
             if (book.backImage) {
-                const backFilename = `${generateFileName(book.title, 'back')}.jpg`;
+                const backFilename = `${generateFileName(book, 'back')}.jpg`;
                 downloadFile(book.backImage, backFilename);
             }
 
@@ -381,8 +397,8 @@
                 condition: book.condition,
                 note: book.note,
                 createdAt: book.createdAt,
-                frontImageName: book.frontImage ? `${generateFileName(book.title, 'front')}.jpg` : null,
-                backImageName: book.backImage ? `${generateFileName(book.title, 'back')}.jpg` : null
+                frontImageName: book.frontImage ? `${generateFileName(book, 'front')}.jpg` : null,
+                backImageName: book.backImage ? `${generateFileName(book, 'back')}.jpg` : null
             }));
 
             const dataStr = JSON.stringify(exportData, null, 2);
