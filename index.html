@@ -26,6 +26,33 @@
         .toast.error {
             background: #dc2626;
         }
+        .download-progress {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            z-index: 2000;
+            min-width: 300px;
+            text-align: center;
+        }
+        .upload-area {
+            transition: all 0.3s ease;
+        }
+        .upload-area.has-file {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border-color: #059669;
+            color: white;
+        }
+        .upload-area.has-file .upload-icon {
+            color: white;
+        }
+        .upload-area.has-file .upload-text {
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -37,8 +64,12 @@
                 <p class="text-gray-600">Manage your Epson V600 book scans with proper naming conventions</p>
             </div>
             <div class="flex gap-2">
+                <button onclick="downloadAllImages()" class="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold text-lg shadow-lg">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                    Download All Images
+                </button>
                 <button onclick="exportData()" class="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50">
-                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <i data-lucide="file-text" class="w-4 h-4"></i>
                     Export Data
                 </button>
                 <span id="bookCount" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-sm">0 books scanned</span>
@@ -102,42 +133,48 @@
                         <!-- Front Cover -->
                         <div class="space-y-2">
                             <label class="block text-sm font-medium text-gray-700">Front Cover Scan</label>
-                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                            <div id="frontUploadArea" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors" onclick="document.getElementById('frontInput').click()">
                                 <div id="frontPreview" class="hidden">
                                     <img id="frontImage" class="w-full h-32 object-cover rounded mb-2">
-                                    <p class="text-xs text-gray-500">Front cover uploaded</p>
+                                    <p class="text-xs upload-text">Front cover uploaded ✓</p>
                                 </div>
                                 <div id="frontPlaceholder" class="space-y-2">
-                                    <i data-lucide="image" class="w-8 h-8 mx-auto text-gray-400"></i>
-                                    <p class="text-sm text-gray-500">Upload front cover</p>
+                                    <i data-lucide="image" class="upload-icon w-8 h-8 mx-auto text-gray-400"></i>
+                                    <p class="text-sm upload-text text-gray-500">Click to upload front cover</p>
                                 </div>
                                 <input type="file" id="frontInput" accept="image/*" class="hidden">
-                                <button type="button" onclick="document.getElementById('frontInput').click()" class="mt-2 flex items-center gap-2 px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-                                    <i data-lucide="upload" class="w-4 h-4"></i>
-                                    Upload
-                                </button>
                             </div>
                         </div>
 
                         <!-- Back Cover -->
                         <div class="space-y-2">
                             <label class="block text-sm font-medium text-gray-700">Back Cover Scan</label>
-                            <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                            <div id="backUploadArea" class="upload-area border-2 border-dashed border-gray-300 rounded-lg p-4 text-center cursor-pointer hover:border-gray-400 transition-colors" onclick="document.getElementById('backInput').click()">
                                 <div id="backPreview" class="hidden">
                                     <img id="backImage" class="w-full h-32 object-cover rounded mb-2">
-                                    <p class="text-xs text-gray-500">Back cover uploaded</p>
+                                    <p class="text-xs upload-text">Back cover uploaded ✓</p>
                                 </div>
                                 <div id="backPlaceholder" class="space-y-2">
-                                    <i data-lucide="image" class="w-8 h-8 mx-auto text-gray-400"></i>
-                                    <p class="text-sm text-gray-500">Upload back cover</p>
+                                    <i data-lucide="image" class="upload-icon w-8 h-8 mx-auto text-gray-400"></i>
+                                    <p class="text-sm upload-text text-gray-500">Click to upload back cover</p>
                                 </div>
                                 <input type="file" id="backInput" accept="image/*" class="hidden">
-                                <button type="button" onclick="document.getElementById('backInput').click()" class="mt-2 flex items-center gap-2 px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50">
-                                    <i data-lucide="upload" class="w-4 h-4"></i>
-                                    Upload
-                                </button>
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Big Download Button -->
+                    <div class="pt-4">
+                        <button 
+                            id="downloadCurrentButton" 
+                            onclick="downloadCurrentImages()" 
+                            disabled
+                            class="w-full bg-purple-600 text-white px-6 py-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-lg flex items-center justify-center gap-3 shadow-lg transition-all"
+                        >
+                            <i data-lucide="download" class="w-6 h-6"></i>
+                            Download Images with Generated Names
+                        </button>
+                        <p class="text-xs text-gray-500 mt-2 text-center">Upload images and enter a title to enable download</p>
                     </div>
 
                     <!-- Action Buttons -->
@@ -154,10 +191,10 @@
                     </div>
 
                     <!-- Filename Preview -->
-                    <div id="filenamePreview" class="hidden text-xs text-gray-500 space-y-1">
+                    <div id="filenamePreview" class="hidden text-xs text-gray-500 space-y-1 bg-gray-50 p-3 rounded">
                         <p><strong>Generated filenames:</strong></p>
-                        <p id="frontFilename"></p>
-                        <p id="backFilename"></p>
+                        <p id="frontFilename" class="font-mono"></p>
+                        <p id="backFilename" class="font-mono"></p>
                     </div>
                 </div>
             </div>
@@ -184,6 +221,18 @@
     <!-- Toast Container -->
     <div id="toastContainer"></div>
 
+    <!-- Download Progress Modal -->
+    <div id="downloadProgress" class="download-progress hidden">
+        <div class="flex items-center gap-3 mb-4">
+            <i data-lucide="download" class="w-6 h-6 text-blue-600"></i>
+            <h3 class="text-lg font-semibold">Downloading Images...</h3>
+        </div>
+        <div class="bg-gray-200 rounded-full h-2 mb-4">
+            <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+        </div>
+        <p id="progressText" class="text-sm text-gray-600">Preparing download...</p>
+    </div>
+
     <script>
         let books = JSON.parse(localStorage.getItem('scannedBooks') || '[]');
         let currentEditId = null;
@@ -199,9 +248,12 @@
         });
 
         function setupEventListeners() {
-            // All input fields for filename preview
+            // All input fields for filename preview and download button state
             ['title', 'issue', 'condition', 'note'].forEach(fieldId => {
-                document.getElementById(fieldId).addEventListener('input', updateFilenamePreview);
+                document.getElementById(fieldId).addEventListener('input', function() {
+                    updateFilenamePreview();
+                    updateDownloadButtonState();
+                });
             });
 
             // Image upload handlers
@@ -249,6 +301,22 @@
             }
         }
 
+        function updateDownloadButtonState() {
+            const title = document.getElementById('title').value.trim();
+            const hasImages = frontImageFile || backImageFile;
+            const downloadButton = document.getElementById('downloadCurrentButton');
+            
+            if (title && hasImages) {
+                downloadButton.disabled = false;
+                downloadButton.classList.remove('bg-gray-300', 'cursor-not-allowed');
+                downloadButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+            } else {
+                downloadButton.disabled = true;
+                downloadButton.classList.add('bg-gray-300', 'cursor-not-allowed');
+                downloadButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+            }
+        }
+
         function handleImageUpload(file, side) {
             if (!file || !file.type.startsWith('image/')) {
                 showToast('Please upload an image file', 'error');
@@ -260,18 +328,65 @@
                 const preview = document.getElementById(`${side}Preview`);
                 const placeholder = document.getElementById(`${side}Placeholder`);
                 const image = document.getElementById(`${side}Image`);
+                const uploadArea = document.getElementById(`${side}UploadArea`);
                 
                 image.src = e.target.result;
                 preview.classList.remove('hidden');
                 placeholder.classList.add('hidden');
+                
+                // Add green styling to show file is uploaded
+                uploadArea.classList.add('has-file');
                 
                 if (side === 'front') {
                     frontImageFile = file;
                 } else {
                     backImageFile = file;
                 }
+                
+                updateDownloadButtonState();
             };
             reader.readAsDataURL(file);
+        }
+
+        function downloadCurrentImages() {
+            const currentBook = {
+                title: document.getElementById('title').value,
+                issue: document.getElementById('issue').value,
+                condition: document.getElementById('condition').value,
+                note: document.getElementById('note').value
+            };
+
+            if (!currentBook.title.trim()) {
+                showToast('Please enter a title first', 'error');
+                return;
+            }
+
+            const downloadFile = (file, filename) => {
+                const url = URL.createObjectURL(file);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            };
+
+            let downloadCount = 0;
+
+            if (frontImageFile) {
+                const frontFilename = `${generateFileName(currentBook, 'front')}.jpg`;
+                downloadFile(frontImageFile, frontFilename);
+                downloadCount++;
+            }
+
+            if (backImageFile) {
+                const backFilename = `${generateFileName(currentBook, 'back')}.jpg`;
+                downloadFile(backImageFile, backFilename);
+                downloadCount++;
+            }
+
+            showToast(`Downloaded ${downloadCount} image(s) with generated filenames!`);
         }
 
         function saveBook() {
@@ -321,6 +436,10 @@
             document.getElementById('frontPlaceholder').classList.remove('hidden');
             document.getElementById('backPlaceholder').classList.remove('hidden');
             
+            // Reset upload area styling
+            document.getElementById('frontUploadArea').classList.remove('has-file');
+            document.getElementById('backUploadArea').classList.remove('has-file');
+            
             frontImageFile = null;
             backImageFile = null;
             currentEditId = null;
@@ -329,6 +448,8 @@
             document.getElementById('saveButtonText').textContent = 'Save Book';
             document.getElementById('cancelButton').classList.add('hidden');
             document.getElementById('filenamePreview').classList.add('hidden');
+            
+            updateDownloadButtonState();
         }
 
         function editBook(id) {
@@ -344,11 +465,35 @@
             frontImageFile = book.frontImage;
             backImageFile = book.backImage;
             
+            // Update upload areas if images exist
+            if (book.frontImage) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('frontImage').src = e.target.result;
+                    document.getElementById('frontPreview').classList.remove('hidden');
+                    document.getElementById('frontPlaceholder').classList.add('hidden');
+                    document.getElementById('frontUploadArea').classList.add('has-file');
+                };
+                reader.readAsDataURL(book.frontImage);
+            }
+            
+            if (book.backImage) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('backImage').src = e.target.result;
+                    document.getElementById('backPreview').classList.remove('hidden');
+                    document.getElementById('backPlaceholder').classList.add('hidden');
+                    document.getElementById('backUploadArea').classList.add('has-file');
+                };
+                reader.readAsDataURL(book.backImage);
+            }
+            
             document.getElementById('formTitle').textContent = 'Edit Book Scan';
             document.getElementById('saveButtonText').textContent = 'Update Book';
             document.getElementById('cancelButton').classList.remove('hidden');
             
             updateFilenamePreview();
+            updateDownloadButtonState();
         }
 
         function deleteBook(id) {
@@ -387,6 +532,78 @@
             }
 
             showToast('Images downloaded with proper naming');
+        }
+
+        async function downloadAllImages() {
+            const booksWithImages = books.filter(book => book.frontImage || book.backImage);
+            
+            if (booksWithImages.length === 0) {
+                showToast('No images to download', 'error');
+                return;
+            }
+
+            // Show progress modal
+            const progressModal = document.getElementById('downloadProgress');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            progressModal.classList.remove('hidden');
+            
+            let totalImages = 0;
+            let downloadedImages = 0;
+            
+            // Count total images
+            booksWithImages.forEach(book => {
+                if (book.frontImage) totalImages++;
+                if (book.backImage) totalImages++;
+            });
+
+            const downloadFile = (file, filename) => {
+                return new Promise((resolve) => {
+                    const url = URL.createObjectURL(file);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    // Small delay to prevent browser blocking
+                    setTimeout(resolve, 100);
+                });
+            };
+
+            // Download all images with progress
+            for (const book of booksWithImages) {
+                if (book.frontImage) {
+                    const frontFilename = `${generateFileName(book, 'front')}.jpg`;
+                    await downloadFile(book.frontImage, frontFilename);
+                    downloadedImages++;
+                    
+                    const progress = (downloadedImages / totalImages) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `Downloaded ${downloadedImages} of ${totalImages} images...`;
+                }
+
+                if (book.backImage) {
+                    const backFilename = `${generateFileName(book, 'back')}.jpg`;
+                    await downloadFile(book.backImage, backFilename);
+                    downloadedImages++;
+                    
+                    const progress = (downloadedImages / totalImages) * 100;
+                    progressBar.style.width = `${progress}%`;
+                    progressText.textContent = `Downloaded ${downloadedImages} of ${totalImages} images...`;
+                }
+            }
+
+            // Complete
+            progressText.textContent = `Complete! Downloaded ${totalImages} images with proper filenames.`;
+            
+            setTimeout(() => {
+                progressModal.classList.add('hidden');
+                showToast(`Successfully downloaded ${totalImages} images!`);
+            }, 1500);
         }
 
         function exportData() {
@@ -434,8 +651,8 @@
                             ${book.issue ? `<p class="text-sm text-gray-600">Issue: ${book.issue}</p>` : ''}
                             ${book.condition ? `<p class="text-xs text-gray-500">Condition: ${book.condition}</p>` : ''}
                             <div class="flex gap-2 mt-2">
-                                ${book.frontImage ? '<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">Front scan</span>' : ''}
-                                ${book.backImage ? '<span class="px-2 py-1 bg-gray-100 text-gray-700 rounded text-xs">Back scan</span>' : ''}
+                                ${book.frontImage ? '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Front scan</span>' : ''}
+                                ${book.backImage ? '<span class="px-2 py-1 bg-green-100 text-green-700 rounded text-xs">Back scan</span>' : ''}
                             </div>
                         </div>
                         <div class="flex gap-1">
