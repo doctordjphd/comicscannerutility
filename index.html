@@ -53,6 +53,17 @@
         .upload-area.has-file .upload-text {
             color: white;
         }
+        .btn-enabled {
+            background-color: #7c3aed !important;
+            cursor: pointer !important;
+        }
+        .btn-enabled:hover {
+            background-color: #6d28d9 !important;
+        }
+        .btn-disabled {
+            background-color: #d1d5db !important;
+            cursor: not-allowed !important;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -168,13 +179,12 @@
                         <button 
                             id="downloadCurrentButton" 
                             onclick="downloadCurrentImages()" 
-                            disabled
-                            class="w-full bg-purple-600 text-white px-6 py-4 rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed font-semibold text-lg flex items-center justify-center gap-3 shadow-lg transition-all"
+                            class="w-full text-white px-6 py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-3 shadow-lg transition-all btn-disabled"
                         >
                             <i data-lucide="download" class="w-6 h-6"></i>
                             Download Images with Generated Names
                         </button>
-                        <p class="text-xs text-gray-500 mt-2 text-center">Upload images and enter a title to enable download</p>
+                        <p id="downloadButtonStatus" class="text-xs text-gray-500 mt-2 text-center">Upload images and enter a title to enable download</p>
                     </div>
 
                     <!-- Action Buttons -->
@@ -245,6 +255,7 @@
             renderBookList();
             updateBookCount();
             setupEventListeners();
+            updateDownloadButtonState(); // Initialize button state
         });
 
         function setupEventListeners() {
@@ -264,9 +275,6 @@
             document.getElementById('backInput').addEventListener('change', function(e) {
                 handleImageUpload(e.target.files[0], 'back');
             });
-            
-            // Initialize button state
-            updateDownloadButtonState();
         }
 
         function generateFileName(book, side) {
@@ -308,15 +316,31 @@
             const title = document.getElementById('title').value.trim();
             const hasImages = frontImageFile || backImageFile;
             const downloadButton = document.getElementById('downloadCurrentButton');
+            const statusText = document.getElementById('downloadButtonStatus');
+            
+            console.log('Updating button state:', { title, hasImages, frontImageFile, backImageFile }); // Debug log
             
             if (title && hasImages) {
                 downloadButton.disabled = false;
-                downloadButton.classList.remove('bg-gray-300', 'cursor-not-allowed');
-                downloadButton.classList.add('bg-purple-600', 'hover:bg-purple-700');
+                downloadButton.classList.remove('btn-disabled');
+                downloadButton.classList.add('btn-enabled');
+                statusText.textContent = 'Ready to download!';
+                statusText.classList.remove('text-gray-500');
+                statusText.classList.add('text-green-600');
             } else {
                 downloadButton.disabled = true;
-                downloadButton.classList.add('bg-gray-300', 'cursor-not-allowed');
-                downloadButton.classList.remove('bg-purple-600', 'hover:bg-purple-700');
+                downloadButton.classList.remove('btn-enabled');
+                downloadButton.classList.add('btn-disabled');
+                
+                if (!title && !hasImages) {
+                    statusText.textContent = 'Upload images and enter a title to enable download';
+                } else if (!title) {
+                    statusText.textContent = 'Enter a title to enable download';
+                } else if (!hasImages) {
+                    statusText.textContent = 'Upload at least one image to enable download';
+                }
+                statusText.classList.remove('text-green-600');
+                statusText.classList.add('text-gray-500');
             }
         }
 
@@ -346,7 +370,7 @@
                     backImageFile = file;
                 }
                 
-                // Move this call here, after the files are set
+                console.log('Image uploaded:', side, file.name); // Debug log
                 updateDownloadButtonState();
             };
             reader.readAsDataURL(file);
@@ -362,6 +386,11 @@
 
             if (!currentBook.title.trim()) {
                 showToast('Please enter a title first', 'error');
+                return;
+            }
+
+            if (!frontImageFile && !backImageFile) {
+                showToast('Please upload at least one image', 'error');
                 return;
             }
 
@@ -423,7 +452,6 @@
             localStorage.setItem('scannedBooks', JSON.stringify(books));
             renderBookList();
             updateBookCount();
-            // Removed resetForm() call - fields stay populated
         }
 
         function resetForm() {
