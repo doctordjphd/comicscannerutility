@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EBay Listing Parser</title>
+    <title>Comic Book Cataloger</title>
     <style>
         * {
             margin: 0;
@@ -224,8 +224,8 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>📚 EBay Listing Parser</h1>
-            <p>Generate Image Files</p>
+            <h1>📚 EBay Listing Parsing</h1>
+            <p>Generate Naming Convention</p>
         </div>
 
         <div class="form-section">
@@ -272,24 +272,15 @@
                     </div>
                 </div>
 
-                <button type="submit" class="generate-btn">Generate Comic Entry</button>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <button type="submit" class="generate-btn">Download Images</button>
+                    <button type="button" class="generate-btn" id="clearBtn" style="background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);">Clear Fields</button>
+                </div>
             </form>
         </div>
 
         <div class="results-section">
-            <div id="comicResults" class="hidden">
-                <div class="comic-display">
-                    <div class="comic-side">
-                        <div class="comic-title" id="frontTitle"></div>
-                        <img id="frontPreview" class="comic-image" alt="Front cover">
-                    </div>
-                    
-                    <div class="comic-side">
-                        <div class="comic-title" id="backTitle"></div>
-                        <img id="backPreview" class="comic-image" alt="Back cover">
-                    </div>
-                </div>
-            </div>
+            <!-- Results section removed - downloads happen automatically -->
         </div>
     </div>
 
@@ -358,41 +349,108 @@
                 return;
             }
 
-            // Generate formatted titles
-            let baseTitle = `${title} ${issue} ${condition}`;
+            // Generate base filename
+            let baseFilename = `${title} ${issue} ${condition}`;
             if (note) {
-                baseTitle += ` ${note}`;
+                baseFilename += ` ${note}`;
             }
+            
+            // Clean filename (remove invalid characters)
+            baseFilename = baseFilename.replace(/[<>:"/\\|?*]/g, '_');
 
-            const frontTitle = `${baseTitle} {FRONT}`;
-            const backTitle = `${baseTitle} {BACK}`;
+            // Download front image
+            downloadImage(frontImage, `${baseFilename} {FRONT}`);
+            
+            // Download back image with slight delay
+            setTimeout(() => {
+                downloadImage(backImage, `${baseFilename} {BACK}`);
+            }, 100);
 
-            // Display images and titles
-            const frontReader = new FileReader();
-            const backReader = new FileReader();
-
-            frontReader.onload = function(e) {
-                document.getElementById('frontPreview').src = e.target.result;
-                document.getElementById('frontTitle').textContent = frontTitle;
-            };
-
-            backReader.onload = function(e) {
-                document.getElementById('backPreview').src = e.target.result;
-                document.getElementById('backTitle').textContent = backTitle;
-                
-                // Show results
-                document.getElementById('comicResults').classList.remove('hidden');
-                
-                // Scroll to results
-                document.getElementById('comicResults').scrollIntoView({ 
-                    behavior: 'smooth',
-                    block: 'start'
-                });
-            };
-
-            frontReader.readAsDataURL(frontImage);
-            backReader.readAsDataURL(backImage);
+            // Show success message
+            showSuccessMessage();
         });
+
+        // Clear fields handler
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            document.getElementById('comicForm').reset();
+            
+            // Reset file input wrappers
+            document.getElementById('frontWrapper').classList.remove('has-file');
+            document.getElementById('backWrapper').classList.remove('has-file');
+            
+            // Reset file input text
+            document.querySelector('#frontWrapper .file-input-text').textContent = 'Upload Front Cover';
+            document.querySelector('#backWrapper .file-input-text').textContent = 'Upload Back Cover';
+            
+            // Hide results if shown
+            document.getElementById('comicResults').classList.add('hidden');
+        });
+
+        // Function to download image with custom filename
+        function downloadImage(file, filename) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = function() {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                canvas.toBlob(function(blob) {
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `${filename}.${file.name.split('.').pop()}`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                }, file.type);
+            };
+            
+            img.src = URL.createObjectURL(file);
+        }
+
+        // Function to show success message
+        function showSuccessMessage() {
+            // Create temporary success message
+            const successMsg = document.createElement('div');
+            successMsg.textContent = 'Images downloaded successfully!';
+            successMsg.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: #27ae60;
+                color: white;
+                padding: 15px 25px;
+                border-radius: 8px;
+                font-weight: 600;
+                z-index: 1000;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                animation: slideIn 0.3s ease;
+            `;
+            
+            // Add animation keyframes
+            if (!document.querySelector('#successAnimation')) {
+                const style = document.createElement('style');
+                style.id = 'successAnimation';
+                style.textContent = `
+                    @keyframes slideIn {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(successMsg);
+            
+            // Remove message after 3 seconds
+            setTimeout(() => {
+                successMsg.remove();
+            }, 3000);
+        }
 
         // Auto-resize textarea
         document.getElementById('note').addEventListener('input', function() {
