@@ -264,6 +264,9 @@
             document.getElementById('backInput').addEventListener('change', function(e) {
                 handleImageUpload(e.target.files[0], 'back');
             });
+            
+            // Initialize button state
+            updateDownloadButtonState();
         }
 
         function generateFileName(book, side) {
@@ -343,6 +346,7 @@
                     backImageFile = file;
                 }
                 
+                // Move this call here, after the files are set
                 updateDownloadButtonState();
             };
             reader.readAsDataURL(file);
