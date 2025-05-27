@@ -248,6 +248,7 @@
         let currentEditId = null;
         let frontImageFile = null;
         let backImageFile = null;
+        let buttonEnabled = false; // Track button state
 
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
@@ -255,7 +256,7 @@
             renderBookList();
             updateBookCount();
             setupEventListeners();
-            updateDownloadButtonState(); // Initialize button state
+            updateDownloadButtonState();
         });
 
         function setupEventListeners() {
@@ -318,17 +319,22 @@
             const downloadButton = document.getElementById('downloadCurrentButton');
             const statusText = document.getElementById('downloadButtonStatus');
             
-            console.log('Updating button state:', { title, hasImages, frontImageFile, backImageFile }); // Debug log
+            console.log('Button state check:', { 
+                title: title, 
+                hasImages: hasImages, 
+                frontImageFile: !!frontImageFile, 
+                backImageFile: !!backImageFile 
+            });
             
             if (title && hasImages) {
-                downloadButton.disabled = false;
+                buttonEnabled = true;
                 downloadButton.classList.remove('btn-disabled');
                 downloadButton.classList.add('btn-enabled');
                 statusText.textContent = 'Ready to download!';
                 statusText.classList.remove('text-gray-500');
                 statusText.classList.add('text-green-600');
             } else {
-                downloadButton.disabled = true;
+                buttonEnabled = false;
                 downloadButton.classList.remove('btn-enabled');
                 downloadButton.classList.add('btn-disabled');
                 
@@ -366,17 +372,24 @@
                 
                 if (side === 'front') {
                     frontImageFile = file;
+                    console.log('Front image set:', file.name);
                 } else {
                     backImageFile = file;
+                    console.log('Back image set:', file.name);
                 }
                 
-                console.log('Image uploaded:', side, file.name); // Debug log
                 updateDownloadButtonState();
             };
             reader.readAsDataURL(file);
         }
 
         function downloadCurrentImages() {
+            // Check if button is enabled first
+            if (!buttonEnabled) {
+                showToast('Please upload images and enter a title first', 'error');
+                return;
+            }
+
             const currentBook = {
                 title: document.getElementById('title').value,
                 issue: document.getElementById('issue').value,
@@ -411,12 +424,14 @@
                 const frontFilename = `${generateFileName(currentBook, 'front')}.jpg`;
                 downloadFile(frontImageFile, frontFilename);
                 downloadCount++;
+                console.log('Downloaded front image:', frontFilename);
             }
 
             if (backImageFile) {
                 const backFilename = `${generateFileName(currentBook, 'back')}.jpg`;
                 downloadFile(backImageFile, backFilename);
                 downloadCount++;
+                console.log('Downloaded back image:', backFilename);
             }
 
             showToast(`Downloaded ${downloadCount} image(s) with generated filenames!`);
@@ -475,6 +490,7 @@
             frontImageFile = null;
             backImageFile = null;
             currentEditId = null;
+            buttonEnabled = false;
             
             document.getElementById('formTitle').textContent = 'Add New Book Scan';
             document.getElementById('saveButtonText').textContent = 'Save Book';
