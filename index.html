@@ -431,7 +431,7 @@
                     <div id="batchProgress" class="batch-progress">
                         <div id="batchProgressBar" class="batch-progress-bar"></div>
                         <div id="progressText" style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: #666;"></div>
-</div>
+                    </div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
                         <button type="submit" class="generate-btn">Download Batch</button>
@@ -618,12 +618,12 @@
             baseFilename = baseFilename.replace(/[<>:"/\\|?*]/g, '_');
 
             // Download front image
-            downloadImage(frontImage, `${baseFilename} {FRONT}`);
+            downloadImageDirect(frontImage, `${baseFilename} {FRONT}`);
             
             // Download back image with slight delay
             setTimeout(() => {
-                downloadImage(backImage, `${baseFilename} {BACK}`);
-            }, 100);
+                downloadImageDirect(backImage, `${baseFilename} {BACK}`);
+            }, 300);
 
             // Show success message
             showSuccessMessage('Images downloaded successfully!');
@@ -657,55 +657,63 @@
             const progressBar = document.getElementById('batchProgressBar');
             const progressContainer = document.getElementById('batchProgress');
             const progressText = document.getElementById('progressText');
+            const totalPairs = Math.floor(files.length / 2);
+            
             progressContainer.style.display = 'block';
             progressBar.style.width = '0%';
             progressText.textContent = `Starting batch download of ${totalPairs} pairs...`;
 
-            // Process files in pairs with delays to avoid browser download limits
-            const totalPairs = Math.floor(files.length / 2);
+            // Disable the button during processing
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Processing...';
+
             let processedPairs = 0;
 
+            // Process files in pairs with delays
             for (let i = 0; i < files.length; i += 2) {
                 const frontFile = files[i];
                 const backFile = i + 1 < files.length ? files[i + 1] : null;
                 
                 if (!backFile) {
-                    alert(`Warning: File ${i + 1} (${frontFile.name}) has no matching back cover.`);
+                    console.warn(`Warning: File ${i + 1} (${frontFile.name}) has no matching back cover.`);
                     continue;
                 }
                 
                 const pairNumber = (i / 2) + 1;
                 const copyLetter = numberToLetter(pairNumber);
                 
-                // Download front image
-                await downloadImage(frontFile, `${baseFilename} {Copy ${copyLetter}} {FRONT}`);
+                // Update progress text
+                progressText.textContent = `Processing Copy ${copyLetter} (${processedPairs + 1} of ${totalPairs})...`;
                 
-                // Add delay between front and back
-                await new Promise(resolve => setTimeout(resolve, 200));
+                // Download front image
+                downloadImageDirect(frontFile, `${baseFilename} {Copy ${copyLetter}} {FRONT}`);
+                
+                // Wait before downloading back
+                await new Promise(resolve => setTimeout(resolve, 800));
                 
                 // Download back image
-                await downloadImage(backFile, `${baseFilename} {Copy ${copyLetter}} {BACK}`);
+                downloadImageDirect(backFile, `${baseFilename} {Copy ${copyLetter}} {BACK}`);
                 
-                // Add delay between pairs to avoid browser download limits
-                await new Promise(resolve => setTimeout(resolve, 500));
+                // Wait before next pair
+                await new Promise(resolve => setTimeout(resolve, 1200));
                 
                 // Update progress
                 processedPairs++;
                 const progress = (processedPairs / totalPairs) * 100;
                 progressBar.style.width = `${progress}%`;
-                
-                // Update progress text
-                const progressText = document.getElementById('progressText');
-                if (progressText) {
-                    progressText.textContent = `Processing ${processedPairs} of ${totalPairs} pairs...`;
-                }
             }
 
-            // Hide progress bar after completion
+            // Re-enable button and hide progress
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Download Batch';
+            
+            progressText.textContent = 'Download complete!';
+            
             setTimeout(() => {
                 progressContainer.style.display = 'none';
                 progressText.textContent = '';
-            }, 2000);
+            }, 3000);
 
             // Show success message
             showSuccessMessage(`Batch download complete! ${processedPairs} comic pairs processed.`);
@@ -737,37 +745,36 @@
             document.getElementById('batchProgress').style.display = 'none';
         });
 
-        // Function to download image with custom filename
-        function downloadImage(file, filename) {
-            return new Promise((resolve) => {
-                const canvas = document.createElement('canvas');
-                const ctx = canvas.getContext('2d');
-                const img = new Image();
+        // Simplified download function that works better on Mac
+        function downloadImageDirect(file, filename) {
+            try {
+                // Create a direct blob URL from the file
+                const url = URL.createObjectURL(file);
+                const a = document.createElement('a');
+                a.href = url;
                 
-                img.onload = function() {
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    
-                    canvas.toBlob(function(blob) {
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = `${filename}.${file.name.split('.').pop()}`;
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                        resolve();
-                    }, file.type);
-                };
+                // Get file extension from original file
+                const extension = file.name.split('.').pop() || 'jpg';
+                a.download = `${filename}.${extension}`;
                 
-                img.src = URL.createObjectURL(file);
-            });
+                // Trigger download
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Clean up the URL after a delay
+                setTimeout(() => {
+                    URL.revokeObjectURL(url);
+                }, 1000);
+                
+            } catch (error) {
+                console.error('Download failed:', error);
+                showSuccessMessage('Download failed. Please try again.', true);
+            }
         }
 
         // Function to show success message
-        function showSuccessMessage(message) {
+        function showSuccessMessage(message, isError = false) {
             // Create temporary success message
             const successMsg = document.createElement('div');
             successMsg.textContent = message;
@@ -775,7 +782,7 @@
                 position: fixed;
                 top: 20px;
                 right: 20px;
-                background: #27ae60;
+                background: ${isError ? '#e74c3c' : '#27ae60'};
                 color: white;
                 padding: 15px 25px;
                 border-radius: 8px;
@@ -783,6 +790,7 @@
                 z-index: 1000;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                 animation: slideIn 0.3s ease;
+                max-width: 300px;
             `;
             
             // Add animation keyframes
@@ -802,7 +810,9 @@
             
             // Remove message after 3 seconds
             setTimeout(() => {
-                successMsg.remove();
+                if (successMsg.parentNode) {
+                    successMsg.remove();
+                }
             }, 3000);
         }
 
