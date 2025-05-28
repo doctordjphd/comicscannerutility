@@ -430,7 +430,8 @@
 
                     <div id="batchProgress" class="batch-progress">
                         <div id="batchProgressBar" class="batch-progress-bar"></div>
-                    </div>
+                        <div id="progressText" style="text-align: center; margin-top: 10px; font-size: 0.9rem; color: #666;"></div>
+</div>
 
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
                         <button type="submit" class="generate-btn">Download Batch</button>
@@ -655,10 +656,12 @@
             // Show progress bar
             const progressBar = document.getElementById('batchProgressBar');
             const progressContainer = document.getElementById('batchProgress');
+            const progressText = document.getElementById('progressText');
             progressContainer.style.display = 'block';
             progressBar.style.width = '0%';
+            progressText.textContent = `Starting batch download of ${totalPairs} pairs...`;
 
-            // Process files in pairs
+            // Process files in pairs with delays to avoid browser download limits
             const totalPairs = Math.floor(files.length / 2);
             let processedPairs = 0;
 
@@ -677,19 +680,32 @@
                 // Download front image
                 await downloadImage(frontFile, `${baseFilename} {Copy ${copyLetter}} {FRONT}`);
                 
+                // Add delay between front and back
+                await new Promise(resolve => setTimeout(resolve, 200));
+                
                 // Download back image
                 await downloadImage(backFile, `${baseFilename} {Copy ${copyLetter}} {BACK}`);
+                
+                // Add delay between pairs to avoid browser download limits
+                await new Promise(resolve => setTimeout(resolve, 500));
                 
                 // Update progress
                 processedPairs++;
                 const progress = (processedPairs / totalPairs) * 100;
                 progressBar.style.width = `${progress}%`;
+                
+                // Update progress text
+                const progressText = document.getElementById('progressText');
+                if (progressText) {
+                    progressText.textContent = `Processing ${processedPairs} of ${totalPairs} pairs...`;
+                }
             }
 
             // Hide progress bar after completion
             setTimeout(() => {
                 progressContainer.style.display = 'none';
-            }, 1000);
+                progressText.textContent = '';
+            }, 2000);
 
             // Show success message
             showSuccessMessage(`Batch download complete! ${processedPairs} comic pairs processed.`);
